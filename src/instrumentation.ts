@@ -8,6 +8,13 @@ export const register = async () => {
       console.error('Failed to run database migrations:', error);
     }
 
+    try {
+      const { seedDefaults } = await import('./lib/db/seed');
+      await seedDefaults();
+    } catch (error) {
+      console.error('Failed to seed defaults:', error);
+    }
+
     await import('./lib/config/index');
   }
 };

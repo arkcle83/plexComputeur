@@ -5,13 +5,16 @@ import TextareaAutosize from 'react-textarea-autosize';
 import AttachSmall from './MessageInputActions/AttachSmall';
 import { useChat } from '@/lib/hooks/useChat';
 
+const ACCEPTED_IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+
 const MessageInput = () => {
-  const { loading, sendMessage } = useChat();
+  const { loading, sendMessage, files, setFiles, fileIds, setFileIds } = useChat();
 
   const [copilotEnabled, setCopilotEnabled] = useState(false);
   const [message, setMessage] = useState('');
   const [textareaRows, setTextareaRows] = useState(1);
   const [mode, setMode] = useState<'multi' | 'single'>('single');
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     if (textareaRows >= 2 && message && mode === 'single') {
@@ -45,6 +48,34 @@ const MessageInput = () => {
     };
   }, []);
 
+  const handleFileDrop = async (droppedFiles: FileList) => {
+    const data = new FormData();
+    const accepted = Array.from(droppedFiles).filter((f) => {
+      const ext = f.name.split('.').pop()?.toLowerCase() ?? '';
+      return (
+        ['pdf', 'docx', 'txt', ...ACCEPTED_IMAGE_EXTS].includes(ext)
+      );
+    });
+    if (accepted.length === 0) return;
+
+    accepted.forEach((f) => data.append('files', f));
+
+    const isImageOnly = accepted.every((f) => f.type.startsWith('image/'));
+    if (!isImageOnly) {
+      const embeddingModelProvider = localStorage.getItem('embeddingModelProviderId');
+      const embeddingModel = localStorage.getItem('embeddingModelKey');
+      data.append('embedding_model_provider_id', embeddingModelProvider ?? '');
+      data.append('embedding_model_key', embeddingModel ?? '');
+    }
+
+    const res = await fetch('/api/uploads', { method: 'POST', body: data });
+    const resData = await res.json();
+    if (resData.files) {
+      setFiles([...files, ...resData.files]);
+      setFileIds([...fileIds, ...resData.files.map((f: any) => f.fileId)]);
+    }
+  };
+
   return (
     <form
       onSubmit={(e) => {
@@ -60,8 +91,18 @@ const MessageInput = () => {
           setMessage('');
         }
       }}
+      onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+      onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false); }}
+      onDrop={async (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+        if (e.dataTransfer.files.length > 0) await handleFileDrop(e.dataTransfer.files);
+      }}
       className={cn(
-        'relative bg-light-secondary dark:bg-dark-secondary p-4 flex items-center overflow-visible border border-light-200 dark:border-dark-200 shadow-sm shadow-light-200/10 dark:shadow-black/20 transition-all duration-200 focus-within:border-light-300 dark:focus-within:border-dark-300',
+        'relative bg-light-secondary dark:bg-dark-secondary p-4 flex items-center overflow-visible border shadow-sm shadow-light-200/10 dark:shadow-black/20 transition-all duration-200',
+        isDragging
+          ? 'border-sky-400 dark:border-sky-400'
+          : 'border-light-200 dark:border-dark-200 focus-within:border-light-300 dark:focus-within:border-dark-300',
         mode === 'multi' ? 'flex-col rounded-2xl' : 'flex-row rounded-full',
       )}
     >

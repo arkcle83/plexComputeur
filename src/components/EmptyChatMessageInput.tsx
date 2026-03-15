@@ -6,11 +6,11 @@ import Optimization from './MessageInputActions/Optimization';
 import Attach from './MessageInputActions/Attach';
 import { useChat } from '@/lib/hooks/useChat';
 import ModelSelector from './MessageInputActions/ChatModelSelector';
+import SpaceSelector from './MessageInputActions/SpaceSelector';
 
 const EmptyChatMessageInput = () => {
-  const { sendMessage } = useChat();
+  const { sendMessage, spaceId, setSpaceId } = useChat();
 
-  /* const [copilotEnabled, setCopilotEnabled] = useState(false); */
   const [message, setMessage] = useState('');
 
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -71,6 +71,10 @@ const EmptyChatMessageInput = () => {
               <Sources />
               <ModelSelector />
               <Attach />
+              <SpaceSelector
+                selectedSpaceId={spaceId}
+                onSelect={setSpaceId}
+              />
             </div>
             <button
               disabled={message.trim().length === 0}

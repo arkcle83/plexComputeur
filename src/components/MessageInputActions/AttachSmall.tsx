@@ -85,7 +85,7 @@ const AttachSmall = () => {
                           type="file"
                           onChange={handleChange}
                           ref={fileInputRef}
-                          accept=".pdf,.docx,.txt"
+                          accept=".pdf,.docx,.txt,.jpg,.jpeg,.png,.gif,.webp"
                           multiple
                           hidden
                         />
@@ -111,11 +111,22 @@ const AttachSmall = () => {
                         key={i}
                         className="flex flex-row items-center justify-start w-full space-x-3 p-3"
                       >
-                        <div className="bg-light-100 dark:bg-dark-100 flex items-center justify-center w-9 h-9 rounded-md">
-                          <File
-                            size={16}
-                            className="text-black/70 dark:text-white/70"
-                          />
+                                        <div className="bg-light-100 dark:bg-dark-100 flex items-center justify-center w-9 h-9 rounded-md overflow-hidden">
+                          {['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(
+                            file.fileExtension.toLowerCase(),
+                          ) ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={`/api/uploads/images/${file.fileId}`}
+                              alt={file.fileName}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <File
+                              size={16}
+                              className="text-black/70 dark:text-white/70"
+                            />
+                          )}
                         </div>
                         <p className="text-black/70 dark:text-white/70 text-xs">
                           {file.fileName.length > 25
@@ -146,7 +157,7 @@ const AttachSmall = () => {
         type="file"
         onChange={handleChange}
         ref={fileInputRef}
-        accept=".pdf,.docx,.txt"
+        accept=".pdf,.docx,.txt,.jpg,.jpeg,.png,.gif,.webp"
         multiple
         hidden
       />

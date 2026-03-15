@@ -4,6 +4,7 @@ import { classify } from './classifier';
 import Researcher from './researcher';
 import { getWriterPrompt } from '@/lib/prompts/search/writer';
 import { WidgetExecutor } from './widgets';
+import UploadManager from '@/lib/uploads/manager';
 
 class APISearchAgent {
   async searchAsync(session: SessionManager, input: SearchAgentInput) {
@@ -74,6 +75,11 @@ class APISearchAgent {
       input.config.mode,
     );
 
+    const imageUrls = input.config.fileIds
+      .filter((id) => UploadManager.isImageFile(id))
+      .map((id) => UploadManager.getImageBase64(id))
+      .filter((url): url is string => url !== null);
+
     const answerStream = input.config.llm.streamText({
       messages: [
         {
@@ -84,6 +90,7 @@ class APISearchAgent {
         {
           role: 'user',
           content: input.followUp,
+          ...(imageUrls.length > 0 && { imageUrls }),
         },
       ],
     });

@@ -35,4 +35,22 @@ export const chats = sqliteTable('chats', {
   files: text('files', { mode: 'json' })
     .$type<DBFile[]>()
     .default(sql`'[]'`),
+  spaceId: text('spaceId'),
+  folderId: text('folderId'),
+  pinned: integer('pinned').default(0),
+});
+
+export const spaces = sqliteTable('spaces', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  emoji: text('emoji').default('📁'),
+  description: text('description').default(''),
+  createdAt: text('createdAt').notNull(),
+});
+
+export const folders = sqliteTable('folders', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  spaceId: text('spaceId'),
+  createdAt: text('createdAt').notNull(),
 });

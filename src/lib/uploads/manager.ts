@@ -7,12 +7,19 @@ import { PDFParse } from 'pdf-parse';
 import { CanvasFactory } from 'pdf-parse/worker';
 import officeParser from 'officeparser'
 
-const supportedMimeTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'] as const
+const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
+
+const supportedMimeTypes = [
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'text/plain',
+    ...IMAGE_MIME_TYPES,
+] as const;
 
 type SupportedMimeType = typeof supportedMimeTypes[number];
 
 type UploadManagerParams = {
-    embeddingModel: BaseEmbedding<any>;
+    embeddingModel?: BaseEmbedding<any>;
 }
 
 type RecordedFile = {
@@ -21,6 +28,7 @@ type RecordedFile = {
     filePath: string;
     contentPath: string;
     uploadedAt: string;
+    fileType?: 'document' | 'image';
 }
 
 type FileRes = {
@@ -35,7 +43,7 @@ class UploadManager {
     static uploadedFilesRecordPath = path.join(this.uploadsDir, 'uploaded_files.json');
 
     constructor(private params: UploadManagerParams) {
-        this.embeddingModel = params.embeddingModel;
+        this.embeddingModel = params.embeddingModel!;
 
         if (!fs.existsSync(UploadManager.uploadsDir)) {
             fs.mkdirSync(UploadManager.uploadsDir, { recursive: true });
@@ -67,6 +75,33 @@ class UploadManager {
         const recordedFiles = this.getRecordedFiles();
 
         return recordedFiles.find(f => f.id === fileId) || null;
+    }
+
+    static readonly IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+
+    static isImageFile(fileId: string): boolean {
+        try {
+            const file = this.getFile(fileId);
+            if (!file) return false;
+            const ext = path.extname(file.name).toLowerCase().slice(1);
+            return this.IMAGE_EXTENSIONS.includes(ext);
+        } catch {
+            return false;
+        }
+    }
+
+    static getImageBase64(fileId: string): string | null {
+        try {
+            const file = this.getFile(fileId);
+            if (!file) return null;
+            const ext = path.extname(file.name).toLowerCase().slice(1);
+            if (!this.IMAGE_EXTENSIONS.includes(ext)) return null;
+            const buffer = fs.readFileSync(file.filePath);
+            const mimeType = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+            return `data:${mimeType};base64,${buffer.toString('base64')}`;
+        } catch {
+            return null;
+        }
     }
 
     static getFileChunks(fileId: string): { content: string; embedding: number[] }[] {
@@ -169,6 +204,14 @@ class UploadManager {
                 fs.writeFileSync(docContentPath, JSON.stringify(docData, null, 2));
 
                 return docContentPath;
+            case 'image/jpeg':
+            case 'image/png':
+            case 'image/gif':
+            case 'image/webp': {
+                const imgContentPath = filePath.split('.').slice(0, -1).join('.') + '.content.json';
+                fs.writeFileSync(imgContentPath, JSON.stringify({ type: 'image', filePath, chunks: [] }));
+                return imgContentPath;
+            }
             default:
                 throw new Error(`Unsupported file type: ${fileType}`);
         }
@@ -200,6 +243,7 @@ class UploadManager {
                 filePath: filePath,
                 contentPath: contentFilePath,
                 uploadedAt: new Date().toISOString(),
+                fileType: (IMAGE_MIME_TYPES as unknown as string[]).includes(file.type) ? 'image' : 'document',
             }
 
             UploadManager.addNewRecordedFile(fileRecord);

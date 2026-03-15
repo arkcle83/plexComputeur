@@ -8,6 +8,7 @@ import db from '@/lib/db';
 import { chats, messages } from '@/lib/db/schema';
 import { and, eq, gt } from 'drizzle-orm';
 import { TextBlock } from '@/lib/types';
+import UploadManager from '@/lib/uploads/manager';
 
 class SearchAgent {
   async searchAsync(session: SessionManager, input: SearchAgentInput) {
@@ -119,6 +120,11 @@ class SearchAgent {
       input.config.systemInstructions,
       input.config.mode,
     );
+    const imageUrls = input.config.fileIds
+      .filter((id) => UploadManager.isImageFile(id))
+      .map((id) => UploadManager.getImageBase64(id))
+      .filter((url): url is string => url !== null);
+
     const answerStream = input.config.llm.streamText({
       messages: [
         {
@@ -129,6 +135,7 @@ class SearchAgent {
         {
           role: 'user',
           content: input.followUp,
+          ...(imageUrls.length > 0 && { imageUrls }),
         },
       ],
     });

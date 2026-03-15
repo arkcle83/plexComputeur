@@ -1,6 +1,7 @@
 import z from 'zod';
 import { ResearchAction } from '../../types';
 import UploadStore from '@/lib/uploads/store';
+import UploadManager from '@/lib/uploads/manager';
 
 const schema = z.object({
   queries: z
@@ -12,10 +13,12 @@ const schema = z.object({
 
 const uploadsSearchAction: ResearchAction<typeof schema> = {
   name: 'uploads_search',
-  enabled: (config) =>
-    (config.classification.classification.personalSearch &&
-      config.fileIds.length > 0) ||
-    config.fileIds.length > 0,
+  enabled: (config) => {
+    const docFileIds = config.fileIds.filter(
+      (id) => !UploadManager.isImageFile(id),
+    );
+    return docFileIds.length > 0;
+  },
   schema,
   getToolDescription: () =>
     `Use this tool to perform searches over the user's uploaded files. This is useful when you need to gather information from the user's documents to answer their questions. You can provide up to 3 queries at a time. You will have to use this every single time if this is present and relevant.`,
@@ -27,6 +30,10 @@ const uploadsSearchAction: ResearchAction<typeof schema> = {
   Never use this tool to search the web or for information that is not contained within the user's uploaded files.
   `,
   execute: async (input, additionalConfig) => {
+    // Normalize: LLM may return a string instead of an array
+    if (!Array.isArray(input.queries)) {
+      input.queries = [input.queries as unknown as string];
+    }
     input.queries = input.queries.slice(0, 3);
 
     const researchBlock = additionalConfig.session.getBlock(
@@ -49,9 +56,13 @@ const uploadsSearchAction: ResearchAction<typeof schema> = {
       ]);
     }
 
+    const docFileIds = additionalConfig.fileIds.filter(
+      (id) => !UploadManager.isImageFile(id),
+    );
+
     const uploadStore = new UploadStore({
       embeddingModel: additionalConfig.embedding,
-      fileIds: additionalConfig.fileIds,
+      fileIds: docFileIds,
     });
 
     const results = await uploadStore.query(input.queries, 10);

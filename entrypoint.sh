@@ -27,6 +27,10 @@ else
 fi
 
 cd /home/vane
+
+echo "Backing up database before start..."
+sh scripts/backup-db.sh || echo "Warning: database backup failed, continuing..."
+
 echo "Starting Vane..."
 
 exec node server.js

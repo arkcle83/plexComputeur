@@ -51,6 +51,8 @@ type ChatContext = {
   setSources: (sources: string[]) => void;
   setFiles: (files: File[]) => void;
   setFileIds: (fileIds: string[]) => void;
+  spaceId: string | null;
+  setSpaceId: (spaceId: string | null) => void;
   sendMessage: (
     message: string,
     messageId?: string,
@@ -255,6 +257,8 @@ export const chatContext = createContext<ChatContext>({
   optimizationMode: '',
   chatModelProvider: { key: '', providerId: '' },
   embeddingModelProvider: { key: '', providerId: '' },
+  spaceId: null,
+  setSpaceId: () => {},
   researchEnded: false,
   rewrite: () => {},
   sendMessage: async () => {},
@@ -289,6 +293,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
 
   const [sources, setSources] = useState<string[]>(['web']);
   const [optimizationMode, setOptimizationMode] = useState('speed');
+  const [spaceId, setSpaceId] = useState<string | null>(null);
 
   const [isMessagesLoaded, setIsMessagesLoaded] = useState(false);
 
@@ -757,6 +762,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
         chatId: chatId!,
         files: fileIds,
         sources: sources,
+        spaceId: spaceId,
         optimizationMode: optimizationMode,
         history: rewrite
           ? chatHistory.current.slice(
@@ -822,6 +828,8 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
         messageAppeared,
         notFound,
         optimizationMode,
+        spaceId,
+        setSpaceId,
         setFileIds,
         setFiles,
         setSources,

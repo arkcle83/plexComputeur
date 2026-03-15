@@ -42,6 +42,7 @@ const bodySchema = z.object({
     .optional()
     .default([]),
   files: z.array(z.string()).optional().default([]),
+  spaceId: z.string().nullable().optional().default(null),
   chatModel: chatModelSchema,
   embeddingModel: embeddingModelSchema,
   systemInstructions: z.string().nullable().optional().default(''),
@@ -73,6 +74,7 @@ const ensureChatExists = async (input: {
   sources: SearchSources[];
   query: string;
   fileIds: string[];
+  spaceId?: string | null;
 }) => {
   try {
     const exists = await db.query.chats
@@ -87,6 +89,7 @@ const ensureChatExists = async (input: {
         createdAt: new Date().toISOString(),
         sources: input.sources,
         title: input.query,
+        spaceId: input.spaceId || null,
         files: input.fileIds.map((id) => {
           return {
             fileId: id,
@@ -230,6 +233,7 @@ export const POST = async (req: Request) => {
       sources: body.sources as SearchSources[],
       fileIds: body.files,
       query: body.message.content,
+      spaceId: body.spaceId,
     });
 
     req.signal.addEventListener('abort', () => {

@@ -14,6 +14,7 @@ export type AssistantMessage = {
 export type UserMessage = {
   role: 'user';
   content: string;
+  imageUrls?: string[];
 };
 
 export type ToolMessage = {
